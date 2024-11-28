@@ -1,0 +1,9 @@
+{
+  "name": "RDP and SSH Connect",
+  "description": "Connect to hosts",
+  "uuid": "rdp-ssh-connect@noisyspoon.net",
+  "shell-version": [
+    "47"
+  ],
+  "gettext-domain": "rdp-ssh-connect@noisyspoon.net"
+}
