@@ -21,7 +21,7 @@ import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
 import St from 'gi://St';
 
-import {Extension, gettext as _, ngettext, pgettext} from 'resource:///org/gnome/shell/extensions/extension.js';
+import { Extension, gettext as _, ngettext, pgettext } from 'resource:///org/gnome/shell/extensions/extension.js';
 import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 
@@ -44,7 +44,7 @@ function _getConfig(ctxType) {
   let jsondata = {};
   const content = String(GLib.file_get_contents(pathConfig)[1]);
   try {
-     jsondata = JSON.parse(content);
+    jsondata = JSON.parse(content);
   } catch (e) {
     logError(e);
   }
@@ -55,79 +55,78 @@ function _getConfig(ctxType) {
   return [];
 }
 
-function createMenu(popMenu) {
+function createMenu(panel) {
   if (hasRDP) {
     const RDPHosts = _getConfig('RDP');
     if (RDPHosts.length > 0) {
       const folderRDP = new PopupMenu.PopupSubMenuMenuItem(_('Remote Desktop'), true);
       folderRDP.icon.icon_name = panelIconRDP;
-      popMenu.addMenuItem(folderRDP);  
+      panel._indicator.menu.addMenuItem(folderRDP);
 
-      RDPHosts.forEach((RDPHost) => {          
+      RDPHosts.forEach((RDPHost) => {
         folderRDP.menu.addAction(RDPHost.name, () => {
           connectRDP(RDPHost);
         });
-      });    
+      });
     }
-  }  
+  }
 
   if (hasSSH) {
     const SSHHosts = _getConfig('SSH');
     if (SSHHosts.length > 0) {
       const folderSSH = new PopupMenu.PopupSubMenuMenuItem(_('Secure Shell'), true);
       folderSSH.icon.icon_name = panelIconSSH;
-      popMenu.addMenuItem(folderSSH);  
+      panel._indicator.menu.addMenuItem(folderSSH);
 
-      SSHHosts.forEach((SSHHost) => {          
+      SSHHosts.forEach((SSHHost) => {
         folderSSH.menu.addAction(SSHHost.name, () => {
           connectSSH(SSHHost);
         });
-      });   
+      });
     }
   }
 
   let item = new PopupMenu.PopupImageMenuItem(_('Reload servers'), 'view-refresh-symbolic');
   item.connect("activate", () => {
-      popMenu.removeAll();
-      createMenu(popMenu);
-  });            
-  popMenu.addMenuItem(item);
-}
-
-function fileListenerHack(popMenu, timeout = 10) {
-  GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, timeout, () => {    
-    createMenu(popMenu);
-    return GLib.SOURCE_CONTINUE
+    panel._indicator.menu.removeAll();
+    createMenu(panel);
   });
+  panel._indicator.menu.addMenuItem(item);
+
+  item = new PopupMenu.PopupImageMenuItem(_('Preferences'), 'preferences-other-symbolic');
+  item.connect("activate", () => {
+    panel.openPreferences();
+  });
+  panel._indicator.menu.addMenuItem(item);  
 }
 
 async function execCommand(argv) {
-    try {
-      let proc = new Gio.Subprocess({
-        argv: argv,
-        flags: Gio.SubprocessFlags.STDOUT_PIPE,
+  try {
+    let proc = new Gio.Subprocess({
+      argv: argv,
+      flags: Gio.SubprocessFlags.STDOUT_PIPE,
+    });
+    proc.init(null);
+    return new Promise((resolve, reject) => {
+      proc.communicate_utf8_async(null, null, (proc, res) => {
+        let ok, stdout, stderr;
+        try {
+          [ok, stdout, stderr] = proc.communicate_utf8_finish(res);
+          ok ? resolve(stdout) : reject(stderr);
+        } catch (e) {
+          reject(e);
+        }
       });
-      proc.init(null);
-      return new Promise((resolve, reject) => {
-        proc.communicate_utf8_async(null, null, (proc, res) => {
-          let ok, stdout, stderr;
-          try {
-            [ok, stdout, stderr] = proc.communicate_utf8_finish(res);
-            ok ? resolve(stdout) : reject(stderr);
-          } catch (e) {
-            reject(e);
-          }
-        });
-      });
-    } catch (e) {
-      logError(e);
-      throw e;
-    }
+    });
+  } catch (e) {
+    logError(e);
+    throw e;
+  }
 }
 
 async function connectRDP(host) {
-    const cmd = ["xfreerdp", "/u:"+host.username, "/p:"+host.password, "/v:"+host.server+":"+host.port, "/bpp:24", "/dynamic-resolution", "/toggle-fullscreen", "/compression", "/cert:tofu"];
-    execCommand(cmd);
+  const cmd = ["xfreerdp", "/u:" + host.username, "/p:" + host.password, "/v:" + host.server + ":" + host.port, "/bpp:24", "/dynamic-resolution", "/toggle-fullscreen", "/compression", "/cert:tofu"];
+  execCommand(cmd);
 }
 
 async function connectSSH(host) {
@@ -136,34 +135,36 @@ async function connectSSH(host) {
 }
 
 const Indicator = GObject.registerClass(
-class Indicator extends PanelMenu.Button {
-  _init() {
-    super._init(0.0, _(extensionName));
+  class Indicator extends PanelMenu.Button {
+    _init() {
+      super._init(0.0, _(extensionName));
 
-    const icon = new St.Icon({
-      icon_name: 'network-server-symbolic',
-      style_class: 'system-status-icon',
-    });
-    this.add_child(icon);
-
-    createMenu(this.menu);
-  }
-});
+      const icon = new St.Icon({
+        icon_name: 'network-server-symbolic',
+        style_class: 'system-status-icon',
+      });
+      this.add_child(icon);
+    }
+  });
 
 export default class IndicatorExampleExtension extends Extension {
-    constructor(metadata) {
-        super(metadata);
+  enable() {
+    this._settings = this.getSettings('org.gnome.shell.extensions.example');
+  }
+  constructor(metadata) {
+    super(metadata);
+    this.initTranslations('rdp-ssh-connect@noisyspoon.net');
+  }
 
-        this.initTranslations('rdp-ssh-connect@noisyspoon.net');
-    }
+  enable() {
+    this._indicator = new Indicator();
+    Main.panel.addToStatusArea(this.uuid, this._indicator);
 
-    enable() {
-        this._indicator = new Indicator();
-        Main.panel.addToStatusArea(this.uuid, this._indicator);
-    }
+    createMenu(this);
+  }
 
-    disable() {
-        this._indicator.destroy();
-        this._indicator = null;
-    }
+  disable() {
+    this._indicator.destroy();
+    this._indicator = null;
+  }
 }
