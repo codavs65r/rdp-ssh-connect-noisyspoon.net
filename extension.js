@@ -74,7 +74,7 @@ function createMenu(panel) {
   if (hasSSH) {
     const SSHHosts = _getConfig('SSH');
     if (SSHHosts.length > 0) {
-      const folderSSH = new PopupMenu.PopupSubMenuMenuItem(_('Secure Shell'), true);
+      const folderSSH = new PopupMenu.PopupSubMenuMenuItem(_('Terminal'), true);
       folderSSH.icon.icon_name = panelIconSSH;
       panel._indicator.menu.addMenuItem(folderSSH);
 
@@ -86,18 +86,12 @@ function createMenu(panel) {
     }
   }
 
-  let item = new PopupMenu.PopupImageMenuItem(_('Reload servers'), 'view-refresh-symbolic');
+  let item = new PopupMenu.PopupImageMenuItem(_('Refresh servers'), 'view-refresh-symbolic');
   item.connect("activate", () => {
     panel._indicator.menu.removeAll();
     createMenu(panel);
   });
-  panel._indicator.menu.addMenuItem(item);
-
-  item = new PopupMenu.PopupImageMenuItem(_('Preferences'), 'preferences-other-symbolic');
-  item.connect("activate", () => {
-    panel.openPreferences();
-  });
-  panel._indicator.menu.addMenuItem(item);  
+  panel._indicator.menu.addMenuItem(item); 
 }
 
 async function execCommand(argv) {
