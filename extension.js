@@ -30,19 +30,29 @@ import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 const extensionName = 'RDP and SSH Connect';
 const panelIconRDP = 'computer-symbolic';
 const panelIconSSH = 'utilities-terminal-symbolic';
-const path = GLib.get_home_dir() + "/.config/rdp-ssh-connect";
-const pathConfig = path + "/config.json";
+const pathConfigDir = GLib.get_home_dir() + "/.config/rdp-ssh-connect";
+const pathConfig = pathConfigDir + "/config.json";
 
 const hasRDP = !!GLib.find_program_in_path("xfreerdp");
 const hasSSH = !!GLib.find_program_in_path("ssh");
-const hasConfig = !!GLib.file_test(pathConfig, GLib.FileTest.IS_REGULAR);
+
+let hasConfig = !!GLib.file_test(pathConfig, GLib.FileTest.IS_REGULAR);
+if (!hasConfig) {
+  try {
+    Gio.File.new_for_path(pathConfigDir).make_directory(null);
+  } catch(e) {
+    logError(e);
+  }
+  GLib.file_set_contents(pathConfig, '{"rdp": [], "ssh": []}');
+  hasConfig = true;
+}
 
 function _getConfig(ctxType) {
   if (!hasConfig) {
     return [];
   }
   let jsondata = {};
-  const content = String(GLib.file_get_contents(pathConfig)[1]);
+  const content = new TextDecoder().decode(GLib.file_get_contents(pathConfig)[1]);
   try {
     jsondata = JSON.parse(content);
   } catch (e) {
