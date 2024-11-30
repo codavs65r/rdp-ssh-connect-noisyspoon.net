@@ -105,6 +105,7 @@ function createMenu(panel) {
 }
 
 async function execCommand(argv) {
+  log('rdp-ssh-connect: '+argv.join(' '));
   try {
     let proc = new Gio.Subprocess({
       argv: argv,
@@ -129,7 +130,9 @@ async function execCommand(argv) {
 }
 
 async function connectRDP(host) {
-  const cmd = ["xfreerdp", "/u:" + host.username, "/p:" + host.password, "/v:" + host.server + ":" + host.port, "/bpp:24", "/dynamic-resolution", "/toggle-fullscreen", "/compression", "/cert:tofu"];
+  let cmd = ["xfreerdp", "/u:" + host.username, "/p:" + host.password, "/v:" + host.server + ":" + host.port, "/bpp:24", "/dynamic-resolution", "/toggle-fullscreen", "/compression", "/cert:tofu"];
+  if (host.fullscreen)
+    cmd.push('/f');
   execCommand(cmd);
 }
 
