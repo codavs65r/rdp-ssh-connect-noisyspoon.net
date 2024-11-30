@@ -1,6 +1,6 @@
 {
   "name": "RDP and SSH Connect",
-  "description": "Connect to hosts",
+  "description": "Connect to hosts in $HOME/.config/rd-ssh-connect/config.json file. with Remmina or SSH",
   "uuid": "rdp-ssh-connect@noisyspoon.net",
   "shell-version": [
     "47"

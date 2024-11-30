@@ -29,12 +29,15 @@ import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
 const extensionName = 'RDP and SSH Connect';
 const panelIconRDP = 'computer-symbolic';
+const panelIconVNC = 'computer-symbolic';
 const panelIconSSH = 'utilities-terminal-symbolic';
 const pathConfigDir = GLib.get_home_dir() + "/.config/rdp-ssh-connect";
 const pathConfig = pathConfigDir + "/config.json";
 
 const hasRDP = !!GLib.find_program_in_path("xfreerdp");
 const hasSSH = !!GLib.find_program_in_path("ssh");
+const hasRemmina = !!GLib.find_program_in_path("remmina");
+
 
 let hasConfig = !!GLib.file_test(pathConfig, GLib.FileTest.IS_REGULAR);
 if (!hasConfig) {
@@ -43,7 +46,7 @@ if (!hasConfig) {
   } catch(e) {
     logError(e);
   }
-  GLib.file_set_contents(pathConfig, '{"rdp": [], "ssh": []}');
+  GLib.file_set_contents(pathConfig, '{"desktop": [{"protocol": "rdp", "name": "Dummy", "server": "dummy", "port": 3389, "username": "johndoe", "password": "xxxddd&&&!!!","fullscreen": true}, {"protocol": "vnc", "name": "Dummy", "server": "dummy", "port": 5900, "username": "johndoe", "password": "xxxddd&&&!!!","fullscreen": true}], "ssh": [{"name": "Dummy", "server": "dummy"}]}');
   hasConfig = true;
 }
 
@@ -58,15 +61,17 @@ function _getConfig(ctxType) {
   } catch (e) {
     logError(e);
   }
-  if (ctxType == 'RDP' && jsondata.rdp != undefined)
-    return jsondata.rdp.sort((a, b) => a.name.localeCompare(b.name));
+  if (ctxType == 'RDP' && jsondata.desktop != undefined)
+    return jsondata.desktop.sort((a, b) => a.name.localeCompare(b.name));
+  /*if (ctxType == 'VNC' && jsondata.rdp != undefined)
+    return jsondata.vnc.sort((a, b) => a.name.localeCompare(b.name));*/
   if (ctxType == 'SSH' && jsondata.ssh != undefined)
     return jsondata.ssh.sort((a, b) => a.name.localeCompare(b.name));
   return [];
 }
 
 function createMenu(panel) {
-  if (hasRDP) {
+  if (hasRemmina) {
     const RDPHosts = _getConfig('RDP');
     if (RDPHosts.length > 0) {
       const folderRDP = new PopupMenu.PopupSubMenuMenuItem(_('Remote Desktop'), true);
@@ -75,9 +80,9 @@ function createMenu(panel) {
 
       RDPHosts.forEach((RDPHost) => {
         folderRDP.menu.addAction(RDPHost.name, () => {
-          connectRDP(RDPHost);
+          connectRemmina(RDPHost, 'RDP');
         });
-      });
+      });    
     }
   }
 
@@ -96,12 +101,43 @@ function createMenu(panel) {
     }
   }
 
+  /*if (hasRemmina) {
+    const VNCHosts = _getConfig('VNC');
+    if (VNCHosts.length > 0) {
+      const folderVNC = new PopupMenu.PopupSubMenuMenuItem(_('VNC Desktop'), true);
+      folderVNC.icon.icon_name = panelIconVNC;
+      panel._indicator.menu.addMenuItem(folderVNC);
+
+      VNCHosts.forEach((VNCHost) => {
+        folderVNC.menu.addAction(VNCHost.name, () => {
+          connectRemmina(VNCHost, 'VNC');
+        });
+      });
+    }
+  }*/
+
   let item = new PopupMenu.PopupImageMenuItem(_('Refresh servers'), 'view-refresh-symbolic');
   item.connect("activate", () => {
     panel._indicator.menu.removeAll();
     createMenu(panel);
   });
   panel._indicator.menu.addMenuItem(item); 
+}
+
+async function createRemminaCtx(host, ctxType) {
+  const vncTemplate = GLib.get_home_dir() + "/.local/share/gnome-shell/extensions/rdp-ssh-connect@noisyspoon.net";
+  let template = '';
+  if (ctxType == 'VNC')
+    template = vncTemplate;
+  const contentTemplate = new TextDecoder().decode(GLib.file_get_contents(vncTemplate)[1]);
+  let contentCtx = '';
+  contentCtx = contentTemplate.replace('%server%', host.server);
+  contentCtx = contentTemplate.replace('%port%', host.port);
+  contentCtx = contentTemplate.replace('%password%', host.password);
+  if (ctxType == 'RDP')
+    contentCtx = contentTemplate.replace('%username%', host.username);
+  log(contentCtx);
+  GLib.file_set_contents("/vat/tmp/"+host.server+"-"+host.name+"-"+host.username+".remmina", contentCtx);
 }
 
 async function execCommand(argv) {
@@ -133,6 +169,22 @@ async function connectRDP(host) {
   let cmd = ["xfreerdp", "/u:" + host.username, "/p:" + host.password, "/v:" + host.server + ":" + host.port, "/bpp:24", "/dynamic-resolution", "/toggle-fullscreen", "/compression", "/cert:tofu"];
   if (host.fullscreen)
     cmd.push('/f');
+  execCommand(cmd);
+}
+
+async function connectRemmina(host) {
+  //createRemminaCtx(host, ctxType);
+  let hostname = '';
+  if (host.protocol == 'vnc') {
+    hostname = host.server+":"+host.port+"?VncUsername="+host.username+"\&VncPassword="+host.password;
+  }
+  if (host.protocol == 'rdp') {
+    hostname = host.username+":"+host.password+"@"+host.server+":"+host.port;
+  }
+  //let cmd = ["remmina", "-c", "/vat/tmp/"+host.server+"-"+host.name+"-"+host.username+".remmina"];
+  let cmd = ["remmina", "-c", host.protocol+"://"+hostname];
+  if (host.fullscreen)
+    cmd.push('--enable-fullscreen');
   execCommand(cmd);
 }
 
