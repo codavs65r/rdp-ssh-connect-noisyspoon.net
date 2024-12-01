@@ -42,7 +42,7 @@ function _getConfig(ctxType) {
     try {
       Gio.File.new_for_path(pathConfigDir).make_directory(null);
     } catch(e) {
-      logError(e);
+      console.logError(e);
     }
     const contentDefaultConfig = new TextDecoder().decode(GLib.file_get_contents(pathDefaultConfig)[1]);
     GLib.file_set_contents(pathConfig, contentDefaultConfig);
@@ -57,7 +57,7 @@ function _getConfig(ctxType) {
   try {
     jsondata = JSON.parse(content);
   } catch (e) {
-    logError(e);
+    console.logError(e);
   }
   if (ctxType == 'desktop' && jsondata.desktop != undefined)
     return jsondata.desktop.sort((a, b) => a.name.localeCompare(b.name));
@@ -67,7 +67,6 @@ function _getConfig(ctxType) {
 }
 
 async function execCommand(argv) {
-  log('rdp-ssh-connect: '+argv.join(' '));
   try {
     let proc = new Gio.Subprocess({
       argv: argv,
@@ -86,7 +85,7 @@ async function execCommand(argv) {
       });
     });
   } catch (e) {
-    logError(e);
+    console.logError(e);
     throw e;
   }
 }
