@@ -1,0 +1,28 @@
+{
+    "desktop": [
+        {
+            "protocol": "rdp",
+            "name": "Dummy",
+            "server": "dummy",
+            "port": 3389,
+            "username": "johndoe",
+            "password": "xxxddd&&&!!!",
+            "fullscreen": true
+        },
+        {
+            "protocol": "vnc",
+            "name": "Dummy",
+            "server": "dummy",
+            "port": 5900,
+            "username": "johndoe",
+            "password": "xxxddd&&&!!!",
+            "fullscreen": true
+        }
+    ],
+    "ssh": [
+        {
+            "name": "Dummy",
+            "server": "dummy"
+        }
+    ]
+}

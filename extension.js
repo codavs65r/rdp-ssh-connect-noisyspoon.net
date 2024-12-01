@@ -21,36 +21,34 @@ import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
 import St from 'gi://St';
 
-import { Extension, gettext as _, ngettext, pgettext } from 'resource:///org/gnome/shell/extensions/extension.js';
+import { Extension, gettext as _ } from 'resource:///org/gnome/shell/extensions/extension.js';
 import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
 const extensionName = 'RDP and SSH Connect';
-const panelIconRDP = 'computer-symbolic';
-const panelIconVNC = 'computer-symbolic';
+const panelIconRemoteDesktop = 'computer-symbolic';
 const panelIconSSH = 'utilities-terminal-symbolic';
-const pathConfigDir = GLib.get_home_dir() + "/.config/rdp-ssh-connect";
-const pathConfig = pathConfigDir + "/config.json";
-
-const hasRDP = !!GLib.find_program_in_path("xfreerdp");
-const hasSSH = !!GLib.find_program_in_path("ssh");
-const hasRemmina = !!GLib.find_program_in_path("remmina");
-
-
-let hasConfig = !!GLib.file_test(pathConfig, GLib.FileTest.IS_REGULAR);
-if (!hasConfig) {
-  try {
-    Gio.File.new_for_path(pathConfigDir).make_directory(null);
-  } catch(e) {
-    logError(e);
-  }
-  GLib.file_set_contents(pathConfig, '{"desktop": [{"protocol": "rdp", "name": "Dummy", "server": "dummy", "port": 3389, "username": "johndoe", "password": "xxxddd&&&!!!","fullscreen": true}, {"protocol": "vnc", "name": "Dummy", "server": "dummy", "port": 5900, "username": "johndoe", "password": "xxxddd&&&!!!","fullscreen": true}], "ssh": [{"name": "Dummy", "server": "dummy"}]}');
-  hasConfig = true;
-}
 
 function _getConfig(ctxType) {
+  const pathConfigDir = GLib.get_home_dir() + "/.config/rdp-ssh-connect";
+  const pathConfig = pathConfigDir + "/config.json";
+  const pathExtensionDir = GLib.get_home_dir() + "/.local/share/gnome-shell/extensions/rdp-ssh-connect@noisyspoon.net";
+  const pathDefaultConfig = pathExtensionDir + "/config.json";
+
+  let hasConfig = !!GLib.file_test(pathConfig, GLib.FileTest.IS_REGULAR);
+  if (!hasConfig) {
+    try {
+      Gio.File.new_for_path(pathConfigDir).make_directory(null);
+    } catch(e) {
+      logError(e);
+    }
+    const contentDefaultConfig = new TextDecoder().decode(GLib.file_get_contents(pathDefaultConfig)[1]);
+    GLib.file_set_contents(pathConfig, contentDefaultConfig);
+    hasConfig = true;
+  }
+
   if (!hasConfig) {
     return [];
   }
@@ -61,83 +59,11 @@ function _getConfig(ctxType) {
   } catch (e) {
     logError(e);
   }
-  if (ctxType == 'RDP' && jsondata.desktop != undefined)
+  if (ctxType == 'desktop' && jsondata.desktop != undefined)
     return jsondata.desktop.sort((a, b) => a.name.localeCompare(b.name));
-  /*if (ctxType == 'VNC' && jsondata.rdp != undefined)
-    return jsondata.vnc.sort((a, b) => a.name.localeCompare(b.name));*/
-  if (ctxType == 'SSH' && jsondata.ssh != undefined)
+  if (ctxType == 'ssh' && jsondata.ssh != undefined)
     return jsondata.ssh.sort((a, b) => a.name.localeCompare(b.name));
   return [];
-}
-
-function createMenu(panel) {
-  if (hasRemmina) {
-    const RDPHosts = _getConfig('RDP');
-    if (RDPHosts.length > 0) {
-      const folderRDP = new PopupMenu.PopupSubMenuMenuItem(_('Remote Desktop'), true);
-      folderRDP.icon.icon_name = panelIconRDP;
-      panel._indicator.menu.addMenuItem(folderRDP);
-
-      RDPHosts.forEach((RDPHost) => {
-        folderRDP.menu.addAction(RDPHost.name, () => {
-          connectRemmina(RDPHost, 'RDP');
-        });
-      });    
-    }
-  }
-
-  if (hasSSH) {
-    const SSHHosts = _getConfig('SSH');
-    if (SSHHosts.length > 0) {
-      const folderSSH = new PopupMenu.PopupSubMenuMenuItem(_('Terminal'), true);
-      folderSSH.icon.icon_name = panelIconSSH;
-      panel._indicator.menu.addMenuItem(folderSSH);
-
-      SSHHosts.forEach((SSHHost) => {
-        folderSSH.menu.addAction(SSHHost.name, () => {
-          connectSSH(SSHHost);
-        });
-      });
-    }
-  }
-
-  /*if (hasRemmina) {
-    const VNCHosts = _getConfig('VNC');
-    if (VNCHosts.length > 0) {
-      const folderVNC = new PopupMenu.PopupSubMenuMenuItem(_('VNC Desktop'), true);
-      folderVNC.icon.icon_name = panelIconVNC;
-      panel._indicator.menu.addMenuItem(folderVNC);
-
-      VNCHosts.forEach((VNCHost) => {
-        folderVNC.menu.addAction(VNCHost.name, () => {
-          connectRemmina(VNCHost, 'VNC');
-        });
-      });
-    }
-  }*/
-
-  let item = new PopupMenu.PopupImageMenuItem(_('Refresh servers'), 'view-refresh-symbolic');
-  item.connect("activate", () => {
-    panel._indicator.menu.removeAll();
-    createMenu(panel);
-  });
-  panel._indicator.menu.addMenuItem(item); 
-}
-
-async function createRemminaCtx(host, ctxType) {
-  const vncTemplate = GLib.get_home_dir() + "/.local/share/gnome-shell/extensions/rdp-ssh-connect@noisyspoon.net";
-  let template = '';
-  if (ctxType == 'VNC')
-    template = vncTemplate;
-  const contentTemplate = new TextDecoder().decode(GLib.file_get_contents(vncTemplate)[1]);
-  let contentCtx = '';
-  contentCtx = contentTemplate.replace('%server%', host.server);
-  contentCtx = contentTemplate.replace('%port%', host.port);
-  contentCtx = contentTemplate.replace('%password%', host.password);
-  if (ctxType == 'RDP')
-    contentCtx = contentTemplate.replace('%username%', host.username);
-  log(contentCtx);
-  GLib.file_set_contents("/vat/tmp/"+host.server+"-"+host.name+"-"+host.username+".remmina", contentCtx);
 }
 
 async function execCommand(argv) {
@@ -165,15 +91,7 @@ async function execCommand(argv) {
   }
 }
 
-async function connectRDP(host) {
-  let cmd = ["xfreerdp", "/u:" + host.username, "/p:" + host.password, "/v:" + host.server + ":" + host.port, "/bpp:24", "/dynamic-resolution", "/toggle-fullscreen", "/compression", "/cert:tofu"];
-  if (host.fullscreen)
-    cmd.push('/f');
-  execCommand(cmd);
-}
-
 async function connectRemmina(host) {
-  //createRemminaCtx(host, ctxType);
   let hostname = '';
   if (host.protocol == 'vnc') {
     hostname = host.server+":"+host.port+"?VncUsername="+host.username+"\&VncPassword="+host.password;
@@ -181,7 +99,6 @@ async function connectRemmina(host) {
   if (host.protocol == 'rdp') {
     hostname = host.username+":"+host.password+"@"+host.server+":"+host.port;
   }
-  //let cmd = ["remmina", "-c", "/vat/tmp/"+host.server+"-"+host.name+"-"+host.username+".remmina"];
   let cmd = ["remmina", "-c", host.protocol+"://"+hostname];
   if (host.fullscreen)
     cmd.push('--enable-fullscreen');
@@ -191,6 +108,48 @@ async function connectRemmina(host) {
 async function connectSSH(host) {
   const cmd = ["gnome-terminal", "--", "ssh", host.server];
   execCommand(cmd);
+}
+
+function createMenu(panel) {
+  const hasRemmina = !!GLib.find_program_in_path("remmina");
+  const hasSSH = !!GLib.find_program_in_path("ssh");
+
+  if (hasRemmina) {
+    const RemoteDesktopHosts = _getConfig('desktop');
+    if (RemoteDesktopHosts.length > 0) {
+      const folderRemoteDesktop = new PopupMenu.PopupSubMenuMenuItem(_('Remote Desktop'), true);
+      folderRemoteDesktop.icon.icon_name = panelIconRemoteDesktop;
+      panel._indicator.menu.addMenuItem(folderRemoteDesktop);
+
+      RemoteDesktopHosts.forEach((RemoteDesktopHost) => {
+        folderRemoteDesktop.menu.addAction(RemoteDesktopHost.name, () => {
+          connectRemmina(RemoteDesktopHost, 'desktop');
+        });
+      });    
+    }
+  }
+
+  if (hasSSH) {
+    const SSHHosts = _getConfig('ssh');
+    if (SSHHosts.length > 0) {
+      const folderSSH = new PopupMenu.PopupSubMenuMenuItem(_('Terminal'), true);
+      folderSSH.icon.icon_name = panelIconSSH;
+      panel._indicator.menu.addMenuItem(folderSSH);
+
+      SSHHosts.forEach((SSHHost) => {
+        folderSSH.menu.addAction(SSHHost.name, () => {
+          connectSSH(SSHHost);
+        });
+      });
+    }
+  }
+
+  let item = new PopupMenu.PopupImageMenuItem(_('Refresh servers'), 'view-refresh-symbolic');
+  item.connect("activate", () => {
+    panel._indicator.menu.removeAll();
+    createMenu(panel);
+  });
+  panel._indicator.menu.addMenuItem(item); 
 }
 
 const Indicator = GObject.registerClass(
@@ -206,15 +165,7 @@ const Indicator = GObject.registerClass(
     }
   });
 
-export default class IndicatorExampleExtension extends Extension {
-  enable() {
-    this._settings = this.getSettings('org.gnome.shell.extensions.example');
-  }
-  constructor(metadata) {
-    super(metadata);
-    this.initTranslations('rdp-ssh-connect@noisyspoon.net');
-  }
-
+export default class IndicatorRDPSSHConnectExtension extends Extension {
   enable() {
     this._indicator = new Indicator();
     Main.panel.addToStatusArea(this.uuid, this._indicator);

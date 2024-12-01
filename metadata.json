@@ -1,10 +1,10 @@
 {
   "name": "RDP and SSH Connect",
-  "description": "Connect to hosts in $HOME/.config/rd-ssh-connect/config.json file. with Remmina or SSH",
+  "description": "Connect to hosts in $HOME/.config/rd-ssh-connect/config.json file with Remmina (RDP or VNC) or SSH.",
   "uuid": "rdp-ssh-connect@noisyspoon.net",
   "shell-version": [
     "47"
   ],
-  "gettext-domain": "rdp-ssh-connect@noisyspoon.net",
-  "settings-schema": "org.gnome.shell.extensions.rdp-ssh-connect"
+  "url": "https://github.com/codavs65r/rdp-ssh-connect-noisyspoon.net",
+  "gettext-domain": "rdp-ssh-connect@noisyspoon.net"
 }
