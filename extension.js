@@ -31,7 +31,7 @@ const extensionName = 'RDP and SSH Connect';
 const panelIconRemoteDesktop = 'computer-symbolic';
 const panelIconSSH = 'utilities-terminal-symbolic';
 
-function _getConfig(ctxType) {
+function _getConfig(configType) {
   const pathConfigDir = GLib.get_home_dir() + "/.config/rdp-ssh-connect";
   const pathConfig = pathConfigDir + "/config.json";
   const pathExtensionDir = GLib.get_home_dir() + "/.local/share/gnome-shell/extensions/rdp-ssh-connect@noisyspoon.net";
@@ -59,9 +59,9 @@ function _getConfig(ctxType) {
   } catch (e) {
     console.logError(e);
   }
-  if (ctxType == 'desktop' && jsondata.desktop != undefined)
+  if (configType == 'desktop' && jsondata.desktop != undefined)
     return jsondata.desktop.sort((a, b) => a.name.localeCompare(b.name));
-  if (ctxType == 'ssh' && jsondata.ssh != undefined)
+  if (configType == 'ssh' && jsondata.ssh != undefined)
     return jsondata.ssh.sort((a, b) => a.name.localeCompare(b.name));
   return [];
 }
@@ -99,8 +99,20 @@ async function connectRemmina(host) {
     hostname = host.username+":"+host.password+"@"+host.server+":"+host.port;
   }
   let cmd = ["remmina", "-c", host.protocol+"://"+hostname];
-  if (host.fullscreen)
-    cmd.push('--enable-fullscreen');
+  //if (host.fullscreen)
+  //  cmd.push('--enable-fullscreen');
+  execCommand(cmd);
+}
+
+async function connectRDesktop(host) {
+  let cmd = ["rdesktop", "-u", host.username, "-p", host.password, host.server+":"+host.port];
+  //if (host.fullscreen)
+  //  cmd.push('-f');
+  execCommand(cmd);
+}
+
+async function connectVNCViewer(host) {
+  let cmd = ["vncviewer", host.server+":"+host.port];
   execCommand(cmd);
 }
 
@@ -110,10 +122,12 @@ async function connectSSH(host) {
 }
 
 function createMenu(panel) {
+  const hasVNC = !!GLib.find_program_in_path("vncviewer");
+  const hasRDesktop = !!GLib.find_program_in_path("rdesktop");
   const hasRemmina = !!GLib.find_program_in_path("remmina");
   const hasSSH = !!GLib.find_program_in_path("ssh");
 
-  if (hasRemmina) {
+  if (hasRemmina || hasRDesktop || hasVNC) {
     const RemoteDesktopHosts = _getConfig('desktop');
     if (RemoteDesktopHosts.length > 0) {
       const folderRemoteDesktop = new PopupMenu.PopupSubMenuMenuItem(_('Remote Desktop'), true);
@@ -122,7 +136,10 @@ function createMenu(panel) {
 
       RemoteDesktopHosts.forEach((RemoteDesktopHost) => {
         folderRemoteDesktop.menu.addAction(RemoteDesktopHost.name, () => {
-          connectRemmina(RemoteDesktopHost, 'desktop');
+          if (RemoteDesktopHost.protocol == 'rdp')
+            connectRemmina(RemoteDesktopHost);
+          if (RemoteDesktopHost.protocol == 'vnc')
+            connectVNCViewer(RemoteDesktopHost);
         });
       });    
     }

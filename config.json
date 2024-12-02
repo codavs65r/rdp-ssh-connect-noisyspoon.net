@@ -6,17 +6,13 @@
             "server": "dummy",
             "port": 3389,
             "username": "johndoe",
-            "password": "xxxddd&&&!!!",
-            "fullscreen": true
+            "password": "xxxddd&&&!!!"
         },
         {
             "protocol": "vnc",
             "name": "Dummy",
             "server": "dummy",
-            "port": 5900,
-            "username": "johndoe",
-            "password": "xxxddd&&&!!!",
-            "fullscreen": true
+            "port": 5900
         }
     ],
     "ssh": [
