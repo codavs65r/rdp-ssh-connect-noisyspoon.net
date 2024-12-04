@@ -28,7 +28,7 @@ import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
 const extensionName = 'RDP and SSH Connect';
-const panelIconRemoteDesktop = 'computer-symbolic';
+const panelIconRemoteDesktop = 'preferences-desktop-remote-desktop-symbolic';
 const panelIconSSH = 'utilities-terminal-symbolic';
 
 function _getConfig(configType) {
