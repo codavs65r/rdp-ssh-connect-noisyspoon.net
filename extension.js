@@ -117,7 +117,7 @@ async function connectVNCViewer(host) {
 }
 
 async function connectSSH(host) {
-  const cmd = ["gnome-terminal", "--", "ssh", host.server];
+  const cmd = ["x-terminal-emulator", "--", "ssh", host.server];
   execCommand(cmd);
 }
 
