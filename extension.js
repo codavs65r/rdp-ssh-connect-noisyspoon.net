@@ -175,7 +175,7 @@ const Indicator = GObject.registerClass(
 
       const icon = new St.Icon({
         icon_name: 'network-server-symbolic',
-        style_class: 'system-status-icon',
+        style_class: 'system-status-icon no-left no-right',
       });
       this.add_child(icon);
     }
