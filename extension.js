@@ -44,7 +44,30 @@ function _getConfig(configType) {
     } catch(e) {
       console.logError(e);
     }
-    const contentDefaultConfig = new TextDecoder().decode(GLib.file_get_contents(pathDefaultConfig)[1]);
+    const contentDefaultConfig = `{
+    "desktop": [
+        {
+            "protocol": "rdp",
+            "name": "Dummy",
+            "server": "dummy",
+            "port": 3389,
+            "username": "johndoe",
+            "password": "xxxddd&&&!!!"
+        },
+        {
+            "protocol": "vnc",
+            "name": "Dummy",
+            "server": "dummy",
+            "port": 5900
+        }
+    ],
+    "ssh": [
+        {
+            "name": "Dummy",
+            "server": "dummy"
+        }
+    ]
+}`;
     GLib.file_set_contents(pathConfig, contentDefaultConfig);
     hasConfig = true;
   }
